@@ -1,0 +1,125 @@
+#Simulator object
+set ns [new Simulator]
+
+#tcp
+$ns color 1 Red
+
+puts " "
+puts " "
+puts "------------------------------------------------------------ "
+puts " Welcome onboard! Jeremiah Thomas | Network Lab5 "
+puts "------------------------------------------------------------ "
+
+#Log simulation info to run awk scripts on
+set tracefile [open grid_udp_log.tr w]
+$ns trace-all $tracefile
+
+#Nam Trace FILE for the animation
+set nf [open grid_udp_disp.nam w]
+$ns namtrace-all $nf
+
+#finish procedure
+proc finish {} {
+    global ns nf
+    $ns flush-trace
+    close $nf
+    exit 0
+}
+
+#Node Creation : Create 25 nodes
+for {set i 0} {$i < 25} {incr i} {
+    set n($i) [$ns node]
+}
+
+#Links
+  
+ # create horizontal links:-
+ 
+for {set i 0} {$i < 25} {set i [expr $i +5]} {
+
+    for {set j $i} {$j < [expr $i + 4]} {incr j} {
+    $ns duplex-link $n($j) $n([expr $j +1]) 1Mb 10ms DropTail
+  }
+  }
+
+# create vertical links
+for {set i 0} {$i < 20} {set i [expr $i +5]} {
+
+    for {set j $i} {$j < [expr $i + 5]} {incr j} {
+    $ns duplex-link $n($j) $n([expr $j +5]) 1Mb 10ms DropTail
+  }
+  }
+	
+
+#Picking a random source and dest
+
+set src [ expr int(rand()*25) ]
+
+set dest [ expr int(rand()*25) ]
+
+while {$dest == $src} {
+
+set dest [ expr int(rand()*25) ]
+
+}
+
+
+puts "The Source Node is : $src"
+puts "The Destination Node is : $dest"
+
+
+#UDP
+set udp [new Agent/UDP]
+$udp set fid_ 1
+set null [new Agent/Null]
+
+$ns attach-agent $n($src) $udp
+$ns attach-agent $n($dest) $null
+
+$ns connect $udp $null
+
+#CBR over UDP
+set cbr [new Application/Traffic/CBR]
+$cbr attach-agent $udp
+
+
+#Scheduling event flow:-
+
+$ns at 1.0 "$cbr start"
+$ns at 99.0 "$cbr stop"
+
+$ns at 100.0 "finish"
+
+puts " "
+puts "Instead of grid, replace with : grid_udp"
+puts "---------------------------------------------------------------------------------------------- "
+puts " The NAM and Log Trace files have been created. Do run the following commands in order:- "
+puts ""
+puts " For viewing the simulation : nam grid_disp.nam"
+puts ""
+puts "---------------------------------------------------------------------------------------------- "
+puts " 1.For plotting Packet Delivery Ratio :-"
+puts "---------------------------------------------------------------------------------------------- "
+puts "   A) Run : awk -f pdr.awk -v src=<src> -v dest=<dest> grid_log.tr>grid_pdr"
+puts "   B) Run : xgraph grid_pdr"
+
+puts ""
+puts "---------------------------------------------------------------------------------------------- "
+puts " 2.For plotting Packet Loss Ratio :-"
+puts "---------------------------------------------------------------------------------------------- "
+puts "   A) Run : awk -f plr.awk -v src=<src> -v dest=<dest>  grid_log.tr>grid_plr"
+puts "   B) Run : xgraph grid_plr"
+puts ""
+puts "---------------------------------------------------------------------------------------------- "
+puts " 3.For plotting End to End Delay :-"
+puts "---------------------------------------------------------------------------------------------- "
+puts "   A) Run : awk -f e2e_delay.awk -v src=<src> -v dest=<dest> grid_log.tr>grid_e2e_delay"
+puts "   B) Run : xgraph grid_e2e_delay"
+puts ""
+puts "---------------------------------------------------------------------------------------------- "
+puts " "
+
+#Run the simulation
+$ns run
+
+
